@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能合同比对工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .diff-added {
+            background-color: #dcfce7; /* 绿色背景 */
+            font-weight: 600;
+        }
+        .diff-removed {
+            background-color: #fee2e2; /* 红色背景 */
+            font-weight: 600;
+            text-decoration: line-through;
+        }
+        .text-area-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        textarea {
+            flex-grow: 1;
+            resize: none;
+            line-height: 1.5;
+        }
+        .result-container {
+            white-space: pre-wrap; /* Preserve whitespace and line breaks */
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-6 sm:p-10">
+        <h1 class="text-3xl sm:text-4xl font-bold text-center mb-6 text-gray-800">智能合同比对工具</h1>
+        <p class="text-center text-gray-600 mb-8">将合同模板和待比对合同粘贴到下方，点击“开始比对”查看差异。</p>
+
+        <div class="flex flex-col lg:flex-row gap-6 mb-8">
+            <!-- 合同模板输入框 -->
+            <div class="text-area-container">
+                <label for="template-text" class="mb-2 text-gray-700 font-medium">合同模板</label>
+                <textarea id="template-text" rows="15" class="p-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" placeholder="请在此处粘贴合同模板文本...">
+合同编号：[XXX]
+甲方：[甲方名称]
+乙方：[乙方名称]
+本合同由甲方与乙方于[日期]在[地点]签订。
+双方经友好协商，就项目合作事宜达成以下协议。
+第一条 合作内容
+1.1 甲方负责提供技术支持，乙方负责市场推广。
+第二条 合同期限
+2.1 本合同自签订之日起生效，有效期为一年。
+第三条 违约责任
+3.1 任何一方违反本合同约定，应承担违约责任。
+                </textarea>
+            </div>
+
+            <!-- 待比对合同输入框 -->
+            <div class="text-area-container">
+                <label for="comparison-text" class="mb-2 text-gray-700 font-medium">待比对合同</label>
+                <textarea id="comparison-text" rows="15" class="p-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" placeholder="请在此处粘贴待比对合同文本...">
+合同编号：[YYY]
+甲方：[甲方名称]
+乙方：[乙方名称]
+本合同由甲乙双方于[日期]在[地点]共同签署。
+双方经协商一致，就项目合作事宜达成以下协议。
+第一条 合作内容
+1.1 甲方提供技术支持，乙方进行市场推广。
+第二条 合同期限
+2.1 本合同自签订之日起生效，有效期为两年。
+第三条 违约责任
+3.1 任何一方违反本合同约定，应赔偿对方损失。
+第四条 保密条款
+4.1 双方应对本合同内容严格保密。
+                </textarea>
+            </div>
+        </div>
+
+        <div class="flex justify-center mb-8">
+            <button id="compare-button" class="px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition duration-300">
+                开始比对
+            </button>
+        </div>
+
+        <!-- 比对结果显示区 -->
+        <div class="bg-gray-50 p-6 rounded-2xl border border-gray-200 shadow-inner">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">比对结果</h2>
+            <div id="result" class="result-container text-gray-800 text-sm sm:text-base">
+                <p class="text-gray-500">点击“开始比对”后，差异内容会在此处显示...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const templateTextarea = document.getElementById('template-text');
+            const comparisonTextarea = document.getElementById('comparison-text');
+            const compareButton = document.getElementById('compare-button');
+            const resultDiv = document.getElementById('result');
+
+            // 简单的文本比对函数，基于行进行比对
+            function compareText(template, comparison) {
+                const templateLines = template.split('\n');
+                const comparisonLines = comparison.split('\n');
+
+                let htmlContent = '';
+                
+                let i = 0; // template index
+                let j = 0; // comparison index
+
+                // This is a simplified diff algorithm for demonstration
+                while (i < templateLines.length || j < comparisonLines.length) {
+                    const templateLine = templateLines[i] ? templateLines[i].trim() : null;
+                    const comparisonLine = comparisonLines[j] ? comparisonLines[j].trim() : null;
+                    
+                    if (templateLine === comparisonLine && templateLine !== null) {
+                        // 相同行，不标记
+                        htmlContent += `<span>${templateLines[i]}</span>\n`;
+                        i++;
+                        j++;
+                    } else {
+                        // 不同的行或新增/删除行
+                        if (templateLine !== null && comparisonLines.indexOf(templateLine) === -1) {
+                            // 模板中有，但对比合同中没有，标记为删除
+                            htmlContent += `<span class="diff-removed">${templateLines[i]}</span>\n`;
+                            i++;
+                        }
+                        if (comparisonLine !== null && templateLines.indexOf(comparisonLine) === -1) {
+                            // 对比合同中有，但模板中没有，标记为新增
+                            htmlContent += `<span class="diff-added">${comparisonLines[j]}</span>\n`;
+                            j++;
+                        }
+
+                        // Fallback to advance both pointers if no simple match found
+                        if(templateLine !== null && comparisonLines.indexOf(templateLine) > -1 && comparisonLine !== null) {
+                             if(templateLines.indexOf(comparisonLine) === -1){
+                                 // Handle re-ordered lines by just adding them
+                                 htmlContent += `<span class="diff-added">${comparisonLines[j]}</span>\n`;
+                             }
+                             j++;
+                        }
+                        if(comparisonLine !== null && templateLines.indexOf(comparisonLine) > -1 && templateLine !== null) {
+                            if(comparisonLines.indexOf(templateLine) === -1){
+                                htmlContent += `<span class="diff-removed">${templateLines[i]}</span>\n`;
+                            }
+                            i++;
+                        }
+                        
+                        if(templateLine !== null && comparisonLine !== null && templateLines.indexOf(comparisonLine) === -1 && comparisonLines.indexOf(templateLine) === -1) {
+                            // lines are just different, mark both as removed/added
+                            htmlContent += `<span class="diff-removed">${templateLines[i]}</span>\n`;
+                            htmlContent += `<span class="diff-added">${comparisonLines[j]}</span>\n`;
+                            i++;
+                            j++;
+                        }
+                        
+                        if (i === templateLines.length && j < comparisonLines.length && comparisonLine !== null) {
+                            htmlContent += `<span class="diff-added">${comparisonLines[j]}</span>\n`;
+                            j++;
+                        }
+                        if (j === comparisonLines.length && i < templateLines.length && templateLine !== null) {
+                            htmlContent += `<span class="diff-removed">${templateLines[i]}</span>\n`;
+                            i++;
+                        }
+                    }
+                }
+                
+                return htmlContent;
+            }
+
+            // 优化：使用更精确的Myers' Diff算法
+            function myersDiff(a, b) {
+                // A simplified implementation of Myers' Diff algorithm for demonstration
+                const aLines = a.split('\n');
+                const bLines = b.split('\n');
+
+                const N = aLines.length;
+                const M = bLines.length;
+                const max = N + M;
+                const V = new Map();
+                V.set(1, 0);
+
+                for (let D = 0; D <= max; D++) {
+                    for (let k = -D; k <= D; k += 2) {
+                        let x = 0;
+                        if (k === -D || (k !== D && V.get(k - 1) < V.get(k + 1))) {
+                            x = V.get(k + 1);
+                        } else {
+                            x = V.get(k - 1) + 1;
+                        }
+
+                        let y = x - k;
+                        while (x < N && y < M && aLines[x] === bLines[y]) {
+                            x++;
+                            y++;
+                        }
+                        V.set(k, x);
+
+                        if (x >= N && y >= M) {
+                            // Backtrack to build the diff result
+                            return reconstructDiff(aLines, bLines, V, D, N, M);
+                        }
+                    }
+                }
+                return "";
+            }
+
+            function reconstructDiff(aLines, bLines, V, D, N, M) {
+                let html = "";
+                let x = V.get(D);
+                let y = x - D;
+
+                for (let d = D; d > 0; d--) {
+                    const k = x - y;
+                    let prev_k = 0;
+                    
+                    if (k === -d || (k !== d && V.get(k-1) < V.get(k+1))) {
+                        prev_k = k + 1;
+                    } else {
+                        prev_k = k - 1;
+                    }
+
+                    const prev_x = V.get(prev_k);
+                    const prev_y = prev_x - prev_k;
+
+                    // Trace back the move
+                    if (prev_k === k - 1) {
+                        // Horizontal move (deletion from a)
+                        html = `<span class="diff-removed">${aLines[x-1]}</span>\n` + html;
+                        x--;
+                    } else if (prev_k === k + 1) {
+                        // Vertical move (addition to a)
+                        html = `<span class="diff-added">${bLines[y-1]}</span>\n` + html;
+                        y--;
+                    } else if (prev_k === k) {
+                        // Diagonal move (match)
+                        html = `<span>${aLines[x-1]}</span>\n` + html;
+                        x--;
+                        y--;
+                    }
+                }
+                
+                // Add the initial common lines
+                while (x > 0 && y > 0 && aLines[x-1] === bLines[y-1]) {
+                    html = `<span>${aLines[x-1]}</span>\n` + html;
+                    x--;
+                    y--;
+                }
+
+                return html;
+            }
+
+            compareButton.addEventListener('click', () => {
+                const templateText = templateTextarea.value.trim();
+                const comparisonText = comparisonTextarea.value.trim();
+                
+                if (templateText === '' || comparisonText === '') {
+                    resultDiv.innerHTML = '<p class="text-red-500">请输入合同文本才能进行比对。</p>';
+                    return;
+                }
+
+                // Call the advanced diff algorithm
+                const diffHtml = myersDiff(templateText, comparisonText);
+                resultDiv.innerHTML = diffHtml;
+            });
+        });
+    </script>
+</body>
+</html>
